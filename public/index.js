@@ -2,8 +2,8 @@ let draw = document.getElementById("canvas");
 let canvas = draw.getContext('2d');
 let x = 500; // initial x position of spaceship
 let y = 350; // initial y position of spaceship
-let spaceshipXSize = 25; // widthX size of spaceship
-let spaceshipYSize = 25; // heightY size of spaceship
+let spaceshipXSize = 35; // widthX size of spaceship
+let spaceshipYSize = 55; // heightY size of spaceship
 let keys = {}; // keys for button pressed
 
 function drawBackground(){
@@ -17,14 +17,17 @@ class SpaceShip{
         this.y = y;
         this.width = width;
         this.height = height;
+        this.img = new Image();
+        this.img.src = 'asset/spaceship.gif';
+        this.img.onload = function(){
+            this.draw();
+        };
     }
     draw(){
         drawBackground();
-        canvas.fillStyle ='blue';
-        canvas.fillRect(this.x, this.y, this. width, this.height);
+        canvas.drawImage(this.img, this.x, this.y, this.width, this.height);
     }
 }
-
 // draw spaceship on canvas when page loads
 let spaceship = new SpaceShip(x, y, spaceshipXSize, spaceshipYSize);
 spaceship.draw();
@@ -38,7 +41,8 @@ document.addEventListener('keydown', /**
  */
 function(event){
     keys[event.key] = true;
-    console.log(event.key);
+    console.log(spaceship.y);
+    console.log(spaceship.x);
 });
 document.addEventListener('keyup', /**
  * Event listener function to handle keyup events.
@@ -50,16 +54,31 @@ document.addEventListener('keyup', /**
  */
 function(event){
     keys[event.key] = false;
-    console.log(event.key);
 })
 
 function animate(){
     canvas.clearRect(0, 0, draw.width, draw.height);
 
-    if(keys['w']) spaceship.y -= 2;
-    if(keys['s']) spaceship.y += 2;
-    if(keys['a']) spaceship.x -= 2;
-    if(keys['d']) spaceship.x += 2;
+    if(keys['w']){
+        if(!(spaceship.y < -5)){
+            spaceship.y -= 5;
+        }
+    }
+    if(keys['s']){
+        if(!(spaceship.y > 650)){
+            spaceship.y += 5;
+        }
+    }
+    if(keys['a']){
+        if(!(spaceship.x < 0)){
+            spaceship.x -= 5;
+        }
+    }
+    if(keys['d']){
+        if(!(spaceship.x > 960)){
+            spaceship.x += 5;
+        }
+    }
 
     spaceship.draw();
     requestAnimationFrame(animate);
