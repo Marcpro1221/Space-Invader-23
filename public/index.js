@@ -4,7 +4,8 @@ let x = 500; // initial x position of spaceship
 let y = 350; // initial y position of spaceship
 let spaceshipXSize = 35; // widthX size of spaceship
 let spaceshipYSize = 55; // heightY size of spaceship
-let keys = {}; // keys for button pressed
+let keys = {}; // keys object for button pressed
+let isGameStart = false;
 class SpaceShip{ // Spaceship layout and drawing
     constructor(x, y, width, height){
         this.x = x;
@@ -21,6 +22,7 @@ class SpaceShip{ // Spaceship layout and drawing
         canvas.drawImage(this.img, this.x, this.y, this.width, this.height);
     }
 }
+
 class Star { // Draw stars in different location
     constructor(x, y, r, color) {
         this.x = x;
@@ -60,12 +62,15 @@ class Asteroid{
         this.y = y;
         this.radius = radius;
         this.numOfSide = 7;
+        this.rotation = 0;
     }
     draw(ctx){
         var angle  = 2 * Math.PI / this.numOfSide;
+        this.rotation += Math.PI / 180;
         ctx.save();
         ctx.beginPath();
         ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
         ctx.moveTo(this.radius, 0);
             for(let i = 0; i <= this.numOfSide; i++){
                 ctx.lineTo(this.radius * Math.cos(i * angle), this.radius * Math.sin(i * angle));
@@ -76,14 +81,10 @@ class Asteroid{
         ctx.stroke();   
         ctx.restore(); 
     }
-
-    turn(){
-
-    }
     moveDown(speed){
         this.y += speed;
         //let radius = [50, 75, 100];
-        if(this.y > draw.height){
+        if(this.y > draw.height + 100){
             this.y = 0;
             this.x = Math.floor(Math.random()*draw.width);
         }
@@ -91,13 +92,7 @@ class Asteroid{
 }
 
 // draw spaceship on canvas when page loads
-let spaceship = new SpaceShip(x, y, spaceshipXSize, spaceshipYSize);
-
-function randomColor(){ // random color generator for stars
-    var arrColors = ["ffffff", "ffecd3" , "bfcfff"];
-    return "#"+arrColors[Math.floor((Math.random()*3))];
-}
-
+let spaceship = new SpaceShip(x - (spaceshipXSize / 2), y - spaceshipYSize, spaceshipXSize, spaceshipYSize); // spaceship coordinates
 // Create 100 stars with random positions and radius
 var stars = [];
 for(let i = 0; i < 200; i++){
@@ -108,15 +103,20 @@ for(let i = 0; i < 200; i++){
     stars.push(new Star(coordinate_x, coordinate_y, star_radius, randomColor()));
 }
 
-var asteroids = [];
+var asteroids = []; // list of asteroids
 var radius = [50, 75, 100, 120]// list of asteroid radius
-var coord_y = [-5, -10, -15, -20]; // list of coordinate Y distance from the top
+var coord_y = [-1000, -2000, -3000, -4000]; // list of coordinate Y distance from the top
 
-for(let i = 0; i < 5; i++){
+for(let i = 0; i < 8; i++){ // Number of Asteroids
     var coord_x = Math.floor((Math.random()*draw.width));
     var coordY = Math.floor((Math.random()* coord_y.length));
     var radiusSize = Math.floor(Math.random() * radius.length);
     asteroids.push(new Asteroid(coord_x, coord_y[coordY], radius[radiusSize]));
+}
+
+function randomColor(){ // random color generator for stars
+    var arrColors = ["ffffff", "ffecd3" , "bfcfff"];
+    return "#"+arrColors[Math.floor((Math.random()*3))];
 }
 
 document.addEventListener('keydown', /**
@@ -142,42 +142,89 @@ document.addEventListener('keyup', /**
 function(event){
     keys[event.key] = false;
 })
-var ast = new Asteroid(50, 80, 50);
+document.addEventListener('keydown',(event)=>{
+    if(event.key === 'Enter'){
+        isGameStart = true;
+    }
+})
+
+function drawStartGame(ctx){
+    const welcomeText = "Welcome to Space Invaders!";
+    const startGameText = "Press ENTER to Start";
+    ctx.fillStyle = 'white';
+
+    const textWidthWelcome = ctx.measureText(welcomeText).width;
+    const textWidthStartGame = ctx.measureText(startGameText).width;
+
+    ctx.font = '25px "Itim"';
+    ctx.fillText(welcomeText, (draw.width - textWidthWelcome) / 2, 150);//coordinates
+    ctx.fillText(startGameText, (draw.width - textWidthStartGame) / 2, 480); //coordinates
+}
+
+function collision(spaceship, asteroi){ // NOT USE UNDER STUDY
+    console.log(`${spaceship.x + spaceship.width}  ${asteroi.x - asteroi.radius+25}`)
+    return (spaceship.x + spaceship.width >= (asteroi.x - asteroi.radius)) &&
+            (spaceship.y + spaceship.height >= (asteroi.y - asteroi.radius)+25)&&
+            (spaceship.x + spaceship.width <= (asteroi.x + asteroi.radius)+25)&&
+            (spaceship.y + spaceship.height <= ( asteroi.y + asteroi.radius+25));
+} // EXAMPLE INPUT
+
+/*
+    TO DO LIST
+    - figure out the collision from bottom to top and top to bottom,
+     to get the actual position of the asteroids
+
+    - create game over after the collision
+
+    - add score and lives system
+
+    - add sound effects and music
+
+*/
 
 function animate(){
-    canvas.clearRect(0, 0, draw.width, draw.height);
+    canvas.clearRect(0, 0, draw.width, draw.height);   
 
-    if(keys['w']){
-        if(!(spaceship.y < -5)){
-            spaceship.y -= 4;
-        }
-    }
-    if(keys['s']){
-        if(!(spaceship.y > 650)){
-            spaceship.y += 4;
-        }
-    }
-    if(keys['a']){
-        if(!(spaceship.x < 0)){
-            spaceship.x -= 4;
-        }
-    }
-    if(keys['d']){
-        if(!(spaceship.x > 960)){
-            spaceship.x += 4;
-        }
-    }
     for(const starS of stars){
         starS.update();
         starS.draw(canvas);
-        starS.moveDown(2);
     }
     for(const astrd of asteroids){
         astrd.draw(canvas);
-        astrd.moveDown(5);
     }
-
     spaceship.draw();
+
+    if(isGameStart){ // freeze game if isGameStart is false
+        for(const starS of stars){
+            starS.moveDown(2);
+        }
+        for(const astrd of asteroids){
+            astrd.moveDown(5);
+        }
+
+        if(keys['w']){
+                if(!(spaceship.y < -5)){
+                    spaceship.y -= 5;
+                }
+            }
+        if(keys['s']){
+                if(!(spaceship.y > 650)){
+                    spaceship.y += 5;
+                }
+        }
+        if(keys['a']){
+                if(!(spaceship.x < 0)){
+                    spaceship.x -= 5;
+                }
+        }
+        if(keys['d']){
+                if(!(spaceship.x > 960)){
+                    spaceship.x += 5;
+            }
+        } 
+    }else{
+        drawStartGame(canvas);
+    }    
     
     requestAnimationFrame(animate);
 }
