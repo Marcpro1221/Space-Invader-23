@@ -17,7 +17,7 @@ class Star { // Draw stars in different location
         this.x = x;
         this.y = y;
         this.r = r;
-        this.rChange = 0.015; // Rate of change of radius
+        this.rChange = 0.045; // Rate of change of radius
         this.color = color;
     }
     // Method to update the star's radius
@@ -117,6 +117,55 @@ class Asteroid{
         return false;
     }
 }
+class Particle {
+    constructor(x, y, radius, dx, dy, ctx) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.dx = dx;
+        this.dy = dy;
+        this.alpha = 1;
+        this.color = this.color;
+        this.ctx = ctx;
+    }
+    draw() {
+        this.ctx.save();
+        this.ctx.globalAlpha = this.alpha;
+        this.ctx.fillStyle = this.color;
+ 
+        /* Begins or reset the path for 
+        the arc created */
+        this.ctx.beginPath();
+ 
+        /* Some curve is created*/
+        for(let i = 0; i < 3; i++){ /// 3 sides for triangles
+            const angle = (i * 2 * Math.PI / 3) + 0;
+            const x = this.x + this.radius * Math.cos(angle);
+            const y = this.y + this.radius * Math.sin(angle);
+
+            if(i === 0){
+                this.ctx.moveTo(x, y);
+            }else{
+                this.ctx.lineTo(x, y);
+            }
+        }
+        this.ctx.fillStyle = this.color;
+        this.ctx.strokeStyle = this.color;
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        /* Restore the recent canvas context*/
+        this.ctx.restore();
+    }
+    update() {
+        if(isCollided){
+            this.draw();
+            this.alpha -= 0.01;
+            this.x += this.dx;
+            this.y += this.dy;
+        }
+    }
+}
 
 function lineIntersectsRect(p1, p2, rectX, rectY, rectWidth, rectHeight) {
     return lineIntersectsLine(p1, p2, {x: rectX, y: rectY}, {x: rectX + rectWidth, y: rectY}) ||
@@ -148,12 +197,18 @@ function drawStartGame(ctx){
 
     const textWidthWelcome = ctx.measureText(welcomeText).width;
     const textWidthStartGame = ctx.measureText(startGameText).width;
-
+    
     ctx.font = '25px "Itim"';
-    ctx.fillText(welcomeText, (draw.width - textWidthWelcome) / 2, 150);//coordinates
-    ctx.fillText(startGameText, (draw.width - textWidthStartGame) / 2, 480); //coordinates
+    //ctx.fillText(welcomeText, (draw.width - textWidthWelcome) / 2, 150);//coordinates
+    ctx.fillText(startGameText, (draw.width - textWidthStartGame) / 2, 580); //coordinates
 }
+function countScore(ctx){
+    let count = `Score: ${counter}`;
+    ctx.fillStyle = 'white';
+    ctx.font = '25px "Itim"';
+    ctx.fillText(count, 50, 100);
 
+}
 function animate(){
     canvas.clearRect(0, 0, draw.width, draw.height);   
 
@@ -167,6 +222,8 @@ function animate(){
     spaceship.draw(canvas);
 
     if(isGameStart){ // freeze game if isGameStart is false
+        countScore(canvas);
+            counter++;
         for(const starS of stars){
             starS.moveDown(2); // speed of 2
         }
@@ -174,36 +231,81 @@ function animate(){
             astrd.moveDown(7);// speed of 7
             if(astrd.intersectsRectangle(spaceship.x, spaceship.y, spaceship.width, spaceship.height)){
                 console.log("collision detected");
-                astrd.y = coord_y[Math.floor(Math.random() * coord_y.length)]
                 isGameStart = false;
+                isCollided = true;
+                totalScores = counter; //total score of game duration
+                console.log(totalScores)
+                for (i = 0; i <= 250; i++) {
+                    let dx = (Math.random() - 0.5) * (Math.random() * 6);
+                    let dy = (Math.random() - 0.5) * (Math.random() * 6);
+                    let radius = Math.random() * 4;
+                    let particle = new Particle(astrd.x, astrd.y, radius, dx, dy, canvas);
+                    particle.color = 'white';
+                    /* Adds new items like particle*/
+                    particles.push(particle);
+                } 
+                for (i = 0; i <= 250; i++) {
+                    let dx = (Math.random() - 0.5) * (Math.random() * 6);
+                    let dy = (Math.random() - 0.5) * (Math.random() * 6);
+                    let radius = Math.random() * 4;
+                    let particle = new Particle(spaceship.x, spaceship.y, radius, dx, dy, canvas);
+                    particle.color = 'blue';
+                    /* Adds new items like particle*/
+                    particles.push(particle);
+                }
+                 astrd.y = coord_y[Math.floor(Math.random() * coord_y.length)];
+                 spaceship.img.src = '';
+                collision.play();
+                collision2.play();
             }else{ 
                 console.log('no collision');
             }
         }
-        if(keys['w']){
+        if(keys['w'] || keys['ArrowUp']){
                 if(!(spaceship.y < -5)){
                     spaceship.y -= 5;
                 }
         }
-        if(keys['s']){
+        if(keys['s'] || keys['ArrowDown']){
                 if(!(spaceship.y > 650)){
                     spaceship.y += 5;
                 }
         }
-        if(keys['a']){
+        if(keys['a'] || keys['ArrowLeft']){
                 if(!(spaceship.x < 0)){
                     spaceship.x -= 5;
                 }
         }
-        if(keys['d']){
+        if(keys['d'] || keys['ArrowRight']){
                 if(!(spaceship.x > 960)){
                     spaceship.x += 5;
             }
-        } 
+        }
+        audio.play();
     }else{
         drawStartGame(canvas);
-    }    
-    
+        setTimeout(function(){
+        }, 2000);
+        countScore(canvas);
+        counter = 0;
+        audio.pause();
+        audio.load();
+        for (let particle of particles) {
+            if (particle.alpha <= 0) {
+                particles = particles.filter(p => p.alpha > 0);
+                break; // Exit loop after modifying array to avoid skipping elements
+            } else {
+                particle.update();
+            }
+        }
+        if(totalScores !== 0){
+            let totalScore = `Total Score: ${totalScores}`;
+            canvas.fillStyle = 'white';
+            canvas.font = '25px "Itim"';
+            const textScoreWidth = canvas.measureText(totalScore).width;
+            canvas.fillText(totalScore, (draw.width - textScoreWidth) / 2, 325);
+        }
+    }
     requestAnimationFrame(animate);
 }
 
@@ -221,18 +323,23 @@ var asteroids = []; // list of asteroids
 var radius = [50, 75, 100, 120]// list of asteroid radius
 var coord_y = [-1000, -2000, -3000, -4000, -5000]; // list of coordinate Y distance from the top
 var sides = [7, 8, 9, 10];
-
+var isCollided = false;
+var particles = [];
+var counter = 0;
+var totalScores = 0;
+var audio = new Audio('/asset/audio/backgroundmusic.m4a');//background music
+var collision = new Audio('/asset/audio/collide.wav'); // collision sound part 1
+var collision2 = new Audio('/asset/audio/collide2.wav');
 /*
    star & asteroid section
 */
 for(let i = 0; i < 200; i++){
     var coordinate_x = Math.floor((Math.random()*draw.width));
     var coordinate_y = Math.floor((Math.random()*draw.height));
-    var star_radius = Math.random() * 1.7 + 0.5;
+    var star_radius = Math.random() * 1.10 + 0.5;
    
     stars.push(new Star(coordinate_x, coordinate_y, star_radius, randomColor()));
 }
-
 
 for(let i = 0; i < 7; i++){ // Number of Asteroids
     var coord_x = Math.floor((Math.random() * draw.width));
@@ -242,8 +349,8 @@ for(let i = 0; i < 7; i++){ // Number of Asteroids
     var countRotation = 0;
     asteroids.push(new Asteroid(coord_x, coord_y[coordY], sides[numOfSides], radius[radiusSize], countRotation));
 }
-animate();
 
+animate();
 
 /*
     Event Listener function section
@@ -259,6 +366,19 @@ function(event){
     keys[event.key] = true;
      console.log(spaceship.y);
      console.log(spaceship.x);
+
+    if(event.key === 'Enter'){
+        if(!isGameStart){
+        isGameStart = true;
+        for(const asteroid of asteroids){
+            asteroid.y = coord_y[Math.floor(Math.random() * coord_y.length)];
+        }
+        spaceship.img.src = 'asset/spaceship.gif';
+        spaceship.x = x;
+        spaceship.y = y;
+        }
+
+    }
 });
 document.addEventListener('keyup', /**
  * Event listener function to handle keyup events.
@@ -272,12 +392,5 @@ function(event){
     keys[event.key] = false;
 });
 document.addEventListener('keydown',(event)=>{
-    if(event.key === 'Enter'){
-        isGameStart = true;
-        for(const asteroid of asteroids){
-            asteroid.y = coord_y[Math.floor(Math.random() * coord_y.length)];
-        }
-        spaceship.x = x;
-        spaceship.y = y;
-    }
+
 });
