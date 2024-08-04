@@ -199,7 +199,6 @@ function drawStartGame(ctx){
     const textWidthStartGame = ctx.measureText(startGameText).width;
     
     ctx.font = '25px "Itim"';
-    //ctx.fillText(welcomeText, (draw.width - textWidthWelcome) / 2, 150);//coordinates
     ctx.fillText(startGameText, (draw.width - textWidthStartGame) / 2, 580); //coordinates
 }
 function countScore(ctx){
@@ -207,7 +206,6 @@ function countScore(ctx){
     ctx.fillStyle = 'white';
     ctx.font = '25px "Itim"';
     ctx.fillText(count, 50, 100);
-
 }
 function animate(){
     canvas.clearRect(0, 0, draw.width, draw.height);   
@@ -263,7 +261,7 @@ function animate(){
         }
         if(keys['w'] || keys['ArrowUp']){
                 if(!(spaceship.y < -5)){
-                    spaceship.y -= 5;
+                    spaceship.y -= 2;
                 }
         }
         if(keys['s'] || keys['ArrowDown']){
@@ -309,6 +307,7 @@ function animate(){
     requestAnimationFrame(animate);
 }
 
+const baseURL = 'http://localhost:3000';
 let draw = document.getElementById("canvas");
 let canvas = draw.getContext('2d');
 let x = 500; // initial x position of spaceship
@@ -333,6 +332,26 @@ var collision2 = new Audio('/asset/audio/collide2.wav');
 /*
    star & asteroid section
 */
+async function getData(){
+    if(totalScores !== 0){
+        const resonse =  await fetch(baseURL,{
+        method: 'POST',
+        headers:{
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            score: totalScores
+        })
+    })
+    const data = await resonse.json();
+    console.log(data);
+    }else{
+        console.log('No score detected');
+    }
+
+}
+
+window.onload = getData;
 for(let i = 0; i < 200; i++){
     var coordinate_x = Math.floor((Math.random()*draw.width));
     var coordinate_y = Math.floor((Math.random()*draw.height));
