@@ -1,8 +1,17 @@
 import express from 'express';
 import pg from 'pg';
+import {Server} from 'socket.io';
+import { fileURLToPath } from 'url';
+import {dirname, join} from 'path';
+import path from 'path';
+import { createServer } from 'http';
+
 const app = express();
 const port = 3000;
 var listOfScores = [];
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const server = createServer(app);
+const io = new Server(server);
 
 const clientDB = new pg.Client({
     host: 'localhost',
@@ -12,22 +21,39 @@ const clientDB = new pg.Client({
     password: 'HelloWorld123'
 });
 clientDB.connect();
-clientDB.query('SELECT score FROM spaceinvader_highscore ORDER BY score DESC;', (err, res)=>{
-    if(err){
-        console.error('Error executing query', err.stack);
-    }else{
-        listOfScores = res.rows;
-        console.log(listOfScores);
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+io.on('connection', (socket) => {
+  console.log('A user connected');
+
+  const sendScoresToClients = async () => {
+    try {
+      const result = await clientDB.query('SELECT score FROM spaceinvader_highscore ORDER BY score DESC;');
+      listOfScores = result.rows;
+      socket.emit('updateScores', listOfScores[0].score);
+      console.log(listOfScores); 
+      console.log(listOfScores[0]); 
+
+    } catch (err) {
+      console.error('Error retrieving scores:', err);
     }
+  };
+
+  socket.on('totalscores', async (score) => {
+    try {
+      await clientDB.query('INSERT INTO spaceinvader_highscore(score) VALUES($1)', [score]);
+      console.log('New score record added');
+      sendScoresToClients(); // Retrieve and send updated scores
+    } catch (err) {
+      console.error('Error inserting score:', err);
+    }
+  });
+
+  // Initial send of scores when a client connects
+  sendScoresToClients();
 });
 
-app.use(express.static('public'));
-app.get('/', (req, res)=>{
-    res.sendFile('public/index.html');
-})
-app.post('/', (req,res)=>{
-    console.log(listOfScores);
+server.listen(port,()=>{
+    console.log(`Server is running on port http://localhost:${port}`); 
 });
-app.listen(port,()=>{
-    console.log(`Server is running on port http://localhost:${port}`);  // Log the server is running on the specified port.  // Server is listening on port 3000.  // Server is running on port 3000.  // Server is listening on port 3000.  // Server is running on port 3000.  // Server is listening on port 3000.  // Server is running on port 3000.  // Server is listening on port 3000.  // Server is listening on port 3000.  // Server is listening on port 3000.  // Server is listening on port 3000.  // Server is listening on port 3000.  // Server is listening on port 3000.  // Server is listening on port 3000.  // Server is listening on port
-})

@@ -203,9 +203,11 @@ function drawStartGame(ctx){
 }
 function countScore(ctx){
     let count = `Score: ${counter}`;
+    let scores = `HighScore: ${highScore}`;
     ctx.fillStyle = 'white';
-    ctx.font = '25px "Itim"';
+    ctx.font = '20px "Itim"';
     ctx.fillText(count, 50, 100);
+    ctx.fillText(scores, 800, 100);
 }
 function animate(){
     canvas.clearRect(0, 0, draw.width, draw.height);   
@@ -218,7 +220,6 @@ function animate(){
         astrd.draw(canvas);
     }
     spaceship.draw(canvas);
-
     if(isGameStart){ // freeze game if isGameStart is false
         countScore(canvas);
             counter++;
@@ -232,7 +233,6 @@ function animate(){
                 isGameStart = false;
                 isCollided = true;
                 totalScores = counter; //total score of game duration
-                console.log(totalScores)
                 for (i = 0; i <= 250; i++) {
                     let dx = (Math.random() - 0.5) * (Math.random() * 6);
                     let dy = (Math.random() - 0.5) * (Math.random() * 6);
@@ -251,6 +251,10 @@ function animate(){
                     /* Adds new items like particle*/
                     particles.push(particle);
                 }
+                if(totalScores !== 0){ // Websocket send and request data
+                    socket.emit('totalscores', totalScores);
+                }
+
                  astrd.y = coord_y[Math.floor(Math.random() * coord_y.length)];
                  spaceship.img.src = '';
                 collision.play();
@@ -306,7 +310,7 @@ function animate(){
     }
     requestAnimationFrame(animate);
 }
-
+const socket = io();
 const baseURL = 'http://localhost:3000';
 let draw = document.getElementById("canvas");
 let canvas = draw.getContext('2d');
@@ -324,6 +328,7 @@ var coord_y = [-1000, -2000, -3000, -4000, -5000]; // list of coordinate Y dista
 var sides = [7, 8, 9, 10];
 var isCollided = false;
 var particles = [];
+var highScore = 0;
 var counter = 0;
 var totalScores = 0;
 var audio = new Audio('/asset/audio/backgroundmusic.m4a');//background music
@@ -332,26 +337,10 @@ var collision2 = new Audio('/asset/audio/collide2.wav');
 /*
    star & asteroid section
 */
-async function getData(){
-    if(totalScores !== 0){
-        const resonse =  await fetch(baseURL,{
-        method: 'POST',
-        headers:{
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            score: totalScores
-        })
-    })
-    const data = await resonse.json();
-    console.log(data);
-    }else{
-        console.log('No score detected');
-    }
-
-}
-
-window.onload = getData;
+socket.on('updateScores', (data)=>{
+    highScore = data;
+    console.log(`HighScore: ${data}`);
+});
 for(let i = 0; i < 200; i++){
     var coordinate_x = Math.floor((Math.random()*draw.width));
     var coordinate_y = Math.floor((Math.random()*draw.height));
@@ -383,8 +372,8 @@ document.addEventListener('keydown', /**
  */
 function(event){
     keys[event.key] = true;
-     console.log(spaceship.y);
-     console.log(spaceship.x);
+     console.log(` Y:${spaceship.y}`);
+     console.log(` X:${spaceship.x}`);
 
     if(event.key === 'Enter'){
         if(!isGameStart){
@@ -396,7 +385,6 @@ function(event){
         spaceship.x = x;
         spaceship.y = y;
         }
-
     }
 });
 document.addEventListener('keyup', /**
@@ -409,7 +397,4 @@ document.addEventListener('keyup', /**
  */
 function(event){
     keys[event.key] = false;
-});
-document.addEventListener('keydown',(event)=>{
-
 });
